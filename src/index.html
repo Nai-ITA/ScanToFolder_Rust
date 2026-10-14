@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scan to Folder</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <header class="top">
+    <img src="logo.png" alt="N.A.I" class="brand">
+    <div class="title">
+      <h1>Scan to Folder</h1>
+      <p class="muted">cartella per le scansioni delle multifunzione · <span id="sysinfo">…</span></p>
+    </div>
+    <button class="btn ghost small" id="theme" title="tema chiaro / scuro">◐</button>
+  </header>
+
+  <main>
+    <div id="banner" class="banner" hidden></div>
+
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="smb">SMB / cartella condivisa</button>
+      <button class="tab" data-tab="ftp" id="tab-ftp">FTP di sistema</button>
+      <button class="tab" data-tab="builtin">FTP integrato</button>
+    </nav>
+
+    <!-- SMB -->
+    <section class="card pane" id="pane-smb">
+      <div class="form">
+        <label>cartella<input id="smb-folder" spellcheck="false"></label>
+        <label>nome condivisione<input id="smb-share" value="Scan" spellcheck="false"></label>
+        <label>utente<input id="smb-user" value="scan" spellcheck="false" autocomplete="off"></label>
+        <label>password<input id="smb-pass" type="password" value="scan" autocomplete="new-password"></label>
+      </div>
+      <div class="checks">
+        <label class="check" id="row-smb1"><input type="checkbox" id="smb-smb1"> abilita SMB v1 <span class="muted">(stampanti/scanner vecchi: Ricoh, Konica…)</span></label>
+        <p class="note warn" id="smb1-warn" hidden>SMB v1 è deprecato e poco sicuro: usalo solo se la stampante non supporta SMB2.</p>
+        <label class="check" id="row-policy"><input type="checkbox" id="smb-policy"> correggi policy di sicurezza <span class="muted">(AllowInsecureGuestAuth, LmCompatibility…)</span></label>
+      </div>
+      <div class="actions">
+        <button class="btn primary" data-act="smb-setup">▶ installa / aggiorna</button>
+        <button class="btn danger" data-act="smb-remove">✕ rimuovi</button>
+        <button class="btn" data-act="smb-status">ℹ stato</button>
+      </div>
+    </section>
+
+    <!-- FTP di sistema -->
+    <section class="card pane" id="pane-ftp" hidden>
+      <p class="note" id="ftp-note"></p>
+      <div class="form" id="ftp-form">
+        <label>cartella FTP<input id="ftp-folder" spellcheck="false"></label>
+        <label>utente FTP<input id="ftp-user" value="scan" spellcheck="false" autocomplete="off"></label>
+        <label>password<input id="ftp-pass" type="password" value="scan" autocomplete="new-password"></label>
+        <label>porta FTP<input id="ftp-port" value="21" inputmode="numeric"></label>
+        <label>passivo da<input id="ftp-pa" value="49152" inputmode="numeric"></label>
+        <label>passivo a<input id="ftp-pb" value="49162" inputmode="numeric"></label>
+      </div>
+      <div class="actions" id="ftp-actions">
+        <button class="btn primary" data-act="ftp-setup">▶ installa FTP</button>
+        <button class="btn danger" data-act="ftp-remove">✕ rimuovi FTP</button>
+      </div>
+    </section>
+
+    <!-- FTP integrato -->
+    <section class="card pane" id="pane-builtin" hidden>
+      <div class="status-row">
+        <span class="dot" id="bi-dot"></span>
+        <strong id="bi-state">server fermo</strong>
+      </div>
+      <p class="note">Server FTP dentro il programma, uguale su Windows, Linux e macOS: non serve installare altro.
+        Riceve le scansioni finché il programma è aperto (anche nascosto nell'area di notifica): attiva l'avvio automatico.</p>
+      <div class="form">
+        <label>cartella<input id="bi-folder" spellcheck="false"></label>
+        <label>utente<input id="bi-user" value="scan" spellcheck="false" autocomplete="off"></label>
+        <label>password<input id="bi-pass" type="password" placeholder="scan" autocomplete="new-password"></label>
+        <label>porta<input id="bi-port" inputmode="numeric"></label>
+        <label>passivo da<input id="bi-pa" value="49152" inputmode="numeric"></label>
+        <label>passivo a<input id="bi-pb" value="49162" inputmode="numeric"></label>
+      </div>
+      <div class="checks">
+        <label class="check"><input type="checkbox" id="bi-auto"> avvia con il computer <span class="muted">(parte nascosto nell'area di notifica)</span></label>
+      </div>
+      <div class="actions">
+        <button class="btn primary" data-act="bi-start" id="bi-start">▶ avvia server</button>
+        <button class="btn danger" data-act="bi-stop">■ ferma server</button>
+        <button class="btn" data-act="bi-fw" id="bi-fw">apri porte nel firewall</button>
+      </div>
+    </section>
+
+    <section class="card log">
+      <div class="log-head"><span class="muted">log</span><button class="btn ghost small" id="log-clear">pulisci</button></div>
+      <pre id="log"></pre>
+    </section>
+  </main>
+
+  <footer>
+    <a href="#" id="nai">Sviluppato da N.A.I di Taddei Lorenzo</a>
+    <span class="muted" id="ver"></span>
+    <button class="btn ghost small" id="quit">esci</button>
+  </footer>
+
+  <div id="modal" class="overlay" hidden>
+    <div class="modal">
+      <p id="modal-text"></p>
+      <div class="actions end">
+        <button class="btn" id="modal-no">annulla</button>
+        <button class="btn danger" id="modal-yes">conferma</button>
+      </div>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
