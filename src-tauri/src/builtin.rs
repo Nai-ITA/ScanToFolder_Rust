@@ -44,17 +44,22 @@ pub fn save(s: &Saved) {
 struct OneUser {
     user: String,
     pass: String,
+    log: LogSink,
 }
 
 #[async_trait]
 impl Authenticator for OneUser {
     async fn authenticate(&self, username: &str, creds: &Credentials) -> Result<Principal, AuthenticationError> {
         if !username.eq_ignore_ascii_case(&self.user) {
+            self.log.0.line(&format!("[{}] login rifiutato: utente '{username}' sconosciuto", now_hms()));
             return Err(AuthenticationError::BadUser);
         }
         match &creds.password {
             Some(p) if *p == self.pass => Ok(Principal { username: self.user.clone() }),
-            _ => Err(AuthenticationError::BadPassword),
+            _ => {
+                self.log.0.line(&format!("[{}] login rifiutato: password errata per '{username}'", now_hms()));
+                Err(AuthenticationError::BadPassword)
+            }
         }
     }
 }
@@ -78,6 +83,45 @@ impl libunftp::notification::DataListener for Notifier {
             let now = now_hms();
             self.0 .0.line(&format!("[{now}] ricevuto {path} ({} KB)", bytes.div_ceil(1024)));
         }
+    }
+}
+
+/// Porta nel log del programma i messaggi di libunftp (connessioni in arrivo,
+/// porte passive, errori di connessione in modalita' attiva, timeout...), cosi'
+/// si capisce dove si ferma una stampante che resta "in attesa".
+struct SlogToLog(std::panic::AssertUnwindSafe<Log>);
+
+impl slog::Drain for SlogToLog {
+    type Ok = ();
+    type Err = slog::Never;
+    fn log(&self, r: &slog::Record, _v: &slog::OwnedKVList) -> Result<(), slog::Never> {
+        let msg = r.msg().to_string();
+        // righe ripetute ad ogni sessione che non aggiungono nulla
+        if msg.starts_with("Starting control loop") || msg.starts_with("Spawning") || msg.starts_with("PASS:") {
+            return Ok(());
+        }
+        let lvl = match r.level() {
+            slog::Level::Critical | slog::Level::Error => "ERRORE ",
+            slog::Level::Warning => "ATTENZIONE ",
+            _ => "",
+        };
+        self.0.line(&format!("[{}] {lvl}ftp: {msg}", now_hms()));
+        Ok(())
+    }
+}
+
+/// Login e logout di ogni sessione.
+#[derive(Debug)]
+struct Presence(LogSink);
+
+#[async_trait]
+impl libunftp::notification::PresenceListener for Presence {
+    async fn receive_presence_event(&self, e: libunftp::notification::PresenceEvent, m: libunftp::notification::EventMeta) {
+        let what = match e {
+            libunftp::notification::PresenceEvent::LoggedIn => "login riuscito",
+            libunftp::notification::PresenceEvent::LoggedOut => "disconnesso",
+        };
+        self.0 .0.line(&format!("[{}] ftp: {what} ({})", now_hms(), m.username));
     }
 }
 
@@ -114,7 +158,7 @@ impl Server {
         let (tx, rx) = tokio::sync::oneshot::channel::<()>();
         let server = libunftp::ServerBuilder::with_authenticator(
             Box::new(move || unftp_sbe_fs::Filesystem::new(f2.clone()).expect("cartella FTP")),
-            Arc::new(OneUser { user: cfg.user.clone(), pass: cfg.password.clone() }),
+            Arc::new(OneUser { user: cfg.user.clone(), pass: cfg.password.clone(), log: LogSink(log.clone()) }),
         )
         .greeting("Scan to Folder - N.A.I")
         .passive_ports(cfg.pasv_start..=cfg.pasv_end)
@@ -122,6 +166,8 @@ impl Server {
         // stampanti (Ricoh, Kyocera, Canon...) usano l'attivo e restano in attesa.
         .active_passive_mode(libunftp::options::ActivePassiveMode::ActiveAndPassive)
         .notify_data(Notifier(LogSink(log.clone())))
+        .notify_presence(Presence(LogSink(log.clone())))
+        .logger(slog::Logger::root(SlogToLog(std::panic::AssertUnwindSafe(log.clone())), slog::o!()))
         .shutdown_indicator(async move {
             let _ = rx.await;
             libunftp::options::Shutdown::new()

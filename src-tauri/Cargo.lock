@@ -3224,6 +3224,7 @@ dependencies = [
  "libunftp",
  "serde",
  "serde_json",
+ "slog",
  "tauri",
  "tauri-build",
  "tauri-plugin-single-instance",
