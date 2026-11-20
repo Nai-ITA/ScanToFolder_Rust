@@ -118,6 +118,9 @@ impl Server {
         )
         .greeting("Scan to Folder - N.A.I")
         .passive_ports(cfg.pasv_start..=cfg.pasv_end)
+        // libunftp di default e' solo passivo e risponde 502 al PORT: molte
+        // stampanti (Ricoh, Kyocera, Canon...) usano l'attivo e restano in attesa.
+        .active_passive_mode(libunftp::options::ActivePassiveMode::ActiveAndPassive)
         .notify_data(Notifier(LogSink(log.clone())))
         .shutdown_indicator(async move {
             let _ = rx.await;
