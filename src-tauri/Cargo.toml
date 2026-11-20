@@ -24,6 +24,11 @@ unftp-sbe-fs = "0.4.0"
 unftp-core = "0.1.0"
 slog = "2"
 
+# libunftp 0.23.1 con la correzione del RETR per le Ricoh (vedi vendor/libunftp,
+# commento "PATCH Scan to Folder" in src/server/controlchan/commands/retr.rs)
+[patch.crates-io]
+libunftp = { path = "vendor/libunftp" }
+
 [profile.release]
 opt-level = "s"
 lto = true
